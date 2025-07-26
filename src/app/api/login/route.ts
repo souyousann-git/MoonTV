@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import { validateUsername, validatePassword } from '@/lib/validation';
 
 export const runtime = 'edge';
 
@@ -56,10 +57,11 @@ async function generateAuthCookie(
 
   if (username && process.env.PASSWORD) {
     authData.username = username;
-    // 使用密码作为密钥对用户名进行签名
-    const signature = await generateSignature(username, process.env.PASSWORD);
-    authData.signature = signature;
     authData.timestamp = Date.now(); // 添加时间戳防重放攻击
+    // 使用密码作为密钥对用户名和时间戳进行签名
+    const dataToSign = `${username}:${authData.timestamp}`;
+    const signature = await generateSignature(dataToSign, process.env.PASSWORD);
+    authData.signature = signature;
   }
 
   return encodeURIComponent(JSON.stringify(authData));
@@ -80,16 +82,19 @@ export async function POST(req: NextRequest) {
           path: '/',
           expires: new Date(0),
           sameSite: 'lax', // 改为 lax 以支持 PWA
-          httpOnly: false, // PWA 需要客户端可访问
-          secure: false, // 根据协议自动设置
+          httpOnly: process.env.NODE_ENV === 'production', // 生产环境启用httpOnly
+          secure: process.env.NODE_ENV === 'production', // 生产环境启用secure
         });
 
         return response;
       }
 
       const { password } = await req.json();
-      if (typeof password !== 'string') {
-        return NextResponse.json({ error: '密码不能为空' }, { status: 400 });
+      
+      // 验证密码输入
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return NextResponse.json({ error: passwordValidation.error }, { status: 400 });
       }
 
       if (password !== envPassword) {
@@ -109,8 +114,8 @@ export async function POST(req: NextRequest) {
         path: '/',
         expires,
         sameSite: 'lax', // 改为 lax 以支持 PWA
-        httpOnly: false, // PWA 需要客户端可访问
-        secure: false, // 根据协议自动设置
+        httpOnly: process.env.NODE_ENV === 'production', // 生产环境启用httpOnly
+        secure: process.env.NODE_ENV === 'production', // 生产环境启用secure
       });
 
       return response;
@@ -119,11 +124,16 @@ export async function POST(req: NextRequest) {
     // 数据库 / redis 模式——校验用户名并尝试连接数据库
     const { username, password } = await req.json();
 
-    if (!username || typeof username !== 'string') {
-      return NextResponse.json({ error: '用户名不能为空' }, { status: 400 });
+    // 验证用户名输入
+    const usernameValidation = validateUsername(username);
+    if (!usernameValidation.valid) {
+      return NextResponse.json({ error: usernameValidation.error }, { status: 400 });
     }
-    if (!password || typeof password !== 'string') {
-      return NextResponse.json({ error: '密码不能为空' }, { status: 400 });
+    
+    // 验证密码输入
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return NextResponse.json({ error: passwordValidation.error }, { status: 400 });
     }
 
     // 可能是站长，直接读环境变量
@@ -141,8 +151,8 @@ export async function POST(req: NextRequest) {
         path: '/',
         expires,
         sameSite: 'lax', // 改为 lax 以支持 PWA
-        httpOnly: false, // PWA 需要客户端可访问
-        secure: false, // 根据协议自动设置
+        httpOnly: process.env.NODE_ENV === 'production', // 生产环境启用httpOnly
+        secure: process.env.NODE_ENV === 'production', // 生产环境启用secure
       });
 
       return response;
@@ -176,8 +186,8 @@ export async function POST(req: NextRequest) {
         path: '/',
         expires,
         sameSite: 'lax', // 改为 lax 以支持 PWA
-        httpOnly: false, // PWA 需要客户端可访问
-        secure: false, // 根据协议自动设置
+        httpOnly: process.env.NODE_ENV === 'production', // 生产环境启用httpOnly
+        secure: process.env.NODE_ENV === 'production', // 生产环境启用secure
       });
 
       return response;

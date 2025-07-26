@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import { validateUsername, validatePassword } from '@/lib/validation';
 
 export const runtime = 'edge';
 
@@ -48,9 +49,10 @@ async function generateAuthCookie(username: string): Promise<string> {
     timestamp: Date.now(),
   };
 
-  // 使用process.env.PASSWORD作为签名密钥，而不是用户密码
+  // 使用process.env.PASSWORD作为签名密钥，对用户名和时间戳进行签名
   const signingKey = process.env.PASSWORD || '';
-  const signature = await generateSignature(username, signingKey);
+  const dataToSign = `${username}:${authData.timestamp}`;
+  const signature = await generateSignature(dataToSign, signingKey);
   authData.signature = signature;
 
   return encodeURIComponent(JSON.stringify(authData));
@@ -74,11 +76,16 @@ export async function POST(req: NextRequest) {
 
     const { username, password } = await req.json();
 
-    if (!username || typeof username !== 'string') {
-      return NextResponse.json({ error: '用户名不能为空' }, { status: 400 });
+    // 验证用户名输入
+    const usernameValidation = validateUsername(username);
+    if (!usernameValidation.valid) {
+      return NextResponse.json({ error: usernameValidation.error }, { status: 400 });
     }
-    if (!password || typeof password !== 'string') {
-      return NextResponse.json({ error: '密码不能为空' }, { status: 400 });
+    
+    // 验证密码输入
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return NextResponse.json({ error: passwordValidation.error }, { status: 400 });
     }
 
     // 检查是否和管理员重复
@@ -112,8 +119,8 @@ export async function POST(req: NextRequest) {
         path: '/',
         expires,
         sameSite: 'lax', // 改为 lax 以支持 PWA
-        httpOnly: false, // PWA 需要客户端可访问
-        secure: false, // 根据协议自动设置
+        httpOnly: process.env.NODE_ENV === 'production', // 生产环境启用httpOnly
+        secure: process.env.NODE_ENV === 'production', // 生产环境启用secure
       });
 
       return response;

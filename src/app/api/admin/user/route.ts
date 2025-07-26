@@ -6,6 +6,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { getStorage } from '@/lib/db';
 import { IStorage } from '@/lib/types';
+import { validateUsername, validatePassword } from '@/lib/validation';
 
 export const runtime = 'edge';
 
@@ -59,6 +60,22 @@ export async function POST(request: NextRequest) {
 
     if (action !== 'setAllowRegister' && !targetUsername) {
       return NextResponse.json({ error: '缺少目标用户名' }, { status: 400 });
+    }
+    
+    // 验证目标用户名
+    if (targetUsername) {
+      const usernameValidation = validateUsername(targetUsername);
+      if (!usernameValidation.valid) {
+        return NextResponse.json({ error: usernameValidation.error }, { status: 400 });
+      }
+    }
+    
+    // 验证目标密码
+    if (targetPassword) {
+      const passwordValidation = validatePassword(targetPassword);
+      if (!passwordValidation.valid) {
+        return NextResponse.json({ error: passwordValidation.error }, { status: 400 });
+      }
     }
 
     if (

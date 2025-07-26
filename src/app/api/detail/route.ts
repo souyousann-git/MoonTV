@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getAvailableApiSites, getCacheTime } from '@/lib/config';
 import { getDetailFromApi } from '@/lib/downstream';
+import { validateVideoId, sanitizeString } from '@/lib/validation';
 
 export const runtime = 'edge';
 
@@ -14,13 +15,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
   }
 
-  if (!/^[\w-]+$/.test(id)) {
-    return NextResponse.json({ error: '无效的视频ID格式' }, { status: 400 });
+  // 验证视频ID
+  const idValidation = validateVideoId(id);
+  if (!idValidation.valid) {
+    return NextResponse.json({ error: idValidation.error }, { status: 400 });
   }
+  
+  // 清理source参数
+  const cleanSourceCode = sanitizeString(sourceCode, 50);
 
   try {
     const apiSites = await getAvailableApiSites();
-    const apiSite = apiSites.find((site) => site.key === sourceCode);
+    const apiSite = apiSites.find((site) => site.key === cleanSourceCode);
 
     if (!apiSite) {
       return NextResponse.json({ error: '无效的API来源' }, { status: 400 });

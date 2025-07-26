@@ -2,6 +2,7 @@
 
 'use client';
 
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import {
   closestCenter,
   DndContext,
@@ -9,6 +10,7 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  DragEndEvent,
 } from '@dnd-kit/core';
 import {
   restrictToParentElement,
@@ -23,7 +25,6 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ChevronDown, ChevronUp, Settings, Users, Video } from 'lucide-react';
 import { GripVertical } from 'lucide-react';
-import { Suspense, useCallback, useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 
 import { AdminConfig, AdminConfigResult } from '@/lib/admin.types';

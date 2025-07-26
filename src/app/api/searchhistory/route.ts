@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { validateSearchQuery } from '@/lib/validation';
 
 export const runtime = 'edge';
 
@@ -53,6 +54,12 @@ export async function POST(request: NextRequest) {
         { error: 'Keyword is required' },
         { status: 400 }
       );
+    }
+
+    // 验证搜索关键词
+    const keywordValidation = validateSearchQuery(keyword);
+    if (!keywordValidation.valid) {
+      return NextResponse.json({ error: keywordValidation.error }, { status: 400 });
     }
 
     await db.addSearchHistory(authInfo.username, keyword);

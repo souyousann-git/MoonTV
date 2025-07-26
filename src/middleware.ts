@@ -34,16 +34,34 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 其他模式：只验证签名
+  // 其他模式：验证签名和时间戳
   // 检查是否有用户名（非localStorage模式下密码不存储在cookie中）
   if (!authInfo.username || !authInfo.signature) {
     return handleAuthFailure(request, pathname);
   }
 
+  // 验证时间戳（防重放攻击）
+  if (authInfo.timestamp) {
+    const currentTime = Date.now();
+    const tokenTime = authInfo.timestamp;
+    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7天过期时间
+    
+    if (currentTime - tokenTime > maxAge) {
+      console.log('认证token已过期');
+      return handleAuthFailure(request, pathname);
+    }
+  } else {
+    // 没有时间戳的旧token，要求重新登录
+    console.log('认证token缺少时间戳');
+    return handleAuthFailure(request, pathname);
+  }
+
   // 验证签名（如果存在）
   if (authInfo.signature) {
+    // 将用户名和时间戳组合进行签名验证，防止重放攻击
+    const dataToVerify = `${authInfo.username}:${authInfo.timestamp}`;
     const isValidSignature = await verifySignature(
-      authInfo.username,
+      dataToVerify,
       authInfo.signature,
       process.env.PASSWORD || ''
     );

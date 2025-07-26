@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getAvailableApiSites, getCacheTime } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
+import { validateSearchQuery } from '@/lib/validation';
 
 export const runtime = 'edge';
 
@@ -19,6 +20,12 @@ export async function GET(request: Request) {
         },
       }
     );
+  }
+
+  // 验证搜索查询输入
+  const queryValidation = validateSearchQuery(query);
+  if (!queryValidation.valid) {
+    return NextResponse.json({ error: queryValidation.error }, { status: 400 });
   }
 
   const apiSites = await getAvailableApiSites();

@@ -159,6 +159,9 @@ function PlayPageClient() {
     'initing' | 'sourceChanging'
   >('initing');
 
+  // 下载状态
+  const [isDownloading, setIsDownloading] = useState(false);
+
   // 播放进度保存相关
   const saveIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSaveTimeRef = useRef<number>(0);
@@ -998,6 +1001,180 @@ function PlayPageClient() {
     }
   };
 
+  /**
+   * 处理视频下载
+   * 支持HLS流转换为MP4格式下载
+   */
+  const handleDownloadVideo = async () => {
+    if (!videoUrl || isDownloading) return;
+
+    setIsDownloading(true);
+    
+    // 使用 setTimeout 来避免阻塞UI，让loading状态能立即显示
+    setTimeout(async () => {
+    try {
+      const fileName = `${videoTitle || '视频'}_第${currentEpisodeIndex + 1}集`;
+      
+      // 检查是否为M3U8链接
+      if (videoUrl.includes('.m3u8')) {
+        // 提供三种下载方式选择
+        const userChoice = confirm(
+          '检测到HLS视频流，请选择下载方式：\n\n' +
+          '确定：使用服务器转换为MP4格式下载（推荐）\n' +
+          '取消：复制链接使用专业下载工具'
+        );
+        
+        if (userChoice) {
+          // 使用服务器API转换下载
+          try {
+            const response = await fetch('/api/download', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                videoUrl,
+                fileName
+              })
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || '下载请求失败');
+            }
+
+            const contentType = response.headers.get('content-type');
+            
+            if (contentType?.includes('application/json')) {
+               // 处理JSON响应（错误或直接下载链接）
+               const data = await response.json();
+               
+               if (data.directDownload) {
+                 // 直接下载链接
+                 const link = document.createElement('a');
+                 link.href = data.url;
+                 link.download = data.fileName;
+                 link.style.display = 'none';
+                 document.body.appendChild(link);
+                 link.click();
+                 document.body.removeChild(link);
+                 alert('视频下载已开始！');
+               } else if (data.methods && data.methods.length > 0) {
+                 // 显示下载工具建议
+                 let message = `${data.suggestion}\n\n`;
+                 data.methods.forEach((method: any, index: number) => {
+                   message += `${index + 1}. ${method.name}\n`;
+                   message += `   ${method.description}\n`;
+                   if (method.command) {
+                     message += `   命令: ${method.command}\n`;
+                   }
+                   if (method.install) {
+                     message += `   安装: ${method.install}\n`;
+                   }
+                   if (method.note) {
+                     message += `   说明: ${method.note}\n`;
+                   }
+                   message += '\n';
+                 });
+                 message += `视频链接已复制到剪贴板，您可以使用上述任一工具下载。`;
+                 
+                 // 复制链接到剪贴板
+                   try {
+                     await navigator.clipboard.writeText(data.videoUrl);
+                     alert(message);
+                   } catch (clipboardError) {
+                     // 如果剪贴板写入失败，提供备用方案
+                     console.warn('剪贴板写入失败:', clipboardError);
+                     
+                     // 创建一个临时的文本区域来实现复制功能
+                     const textArea = document.createElement('textarea');
+                     textArea.value = data.videoUrl;
+                     textArea.style.position = 'fixed';
+                     textArea.style.left = '-999999px';
+                     textArea.style.top = '-999999px';
+                     document.body.appendChild(textArea);
+                     textArea.focus();
+                     textArea.select();
+                     
+                     try {
+                       document.execCommand('copy');
+                       alert(message);
+                     } catch (execError) {
+                       // 如果所有复制方法都失败，显示链接让用户手动复制
+                       const fallbackMessage = message.replace('视频链接已复制到剪贴板，您可以使用上述任一工具下载。', 
+                         `视频链接: ${data.videoUrl}\n\n请手动复制上述链接，然后使用推荐的工具下载。`);
+                       alert(fallbackMessage);
+                     } finally {
+                       document.body.removeChild(textArea);
+                     }
+                   }
+               } else if (data.error) {
+                 throw new Error(data.error);
+               }
+             } else if (contentType?.includes('video/mp4')) {
+              // 处理MP4文件流响应
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `${fileName}.mp4`;
+              link.style.display = 'none';
+              
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              
+              // 清理URL对象
+              setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+              
+              alert('视频转换并下载完成！');
+            } else {
+              // 其他响应类型
+              const text = await response.text();
+              throw new Error(`未知的响应类型: ${contentType}, 内容: ${text}`);
+            }
+          } catch (apiError) {
+            console.error('API下载失败:', apiError);
+            // 如果API失败，回退到复制链接方式
+            await navigator.clipboard.writeText(videoUrl);
+            alert(
+              `服务器转换失败：${apiError instanceof Error ? apiError.message : '未知错误'}\n\n` +
+              `已将视频链接复制到剪贴板！\n\n` +
+              `文件名：${fileName}\n\n` +
+              `建议使用专业下载工具（如yt-dlp、IDM、迅雷等）来下载此HLS视频流。`
+            );
+          }
+        } else {
+          // 复制到剪贴板
+          await navigator.clipboard.writeText(videoUrl);
+          alert(
+            `视频链接已复制到剪贴板！\n\n` +
+            `文件名：${fileName}\n\n` +
+            `您可以使用专业下载工具（如yt-dlp、IDM、迅雷等）来下载此HLS视频流。`
+          );
+        }
+      } else {
+        // 对于直接的视频文件链接，尝试直接下载
+        const link = document.createElement('a');
+        link.href = videoUrl;
+        link.download = `${fileName}.mp4`;
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log('下载已开始');
+      }
+    } catch (error) {
+      console.error('下载失败:', error);
+      alert(`下载失败：${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setIsDownloading(false);
+    }
+    }, 0);
+  };
+
   useEffect(() => {
     if (
       !Artplayer ||
@@ -1530,6 +1707,24 @@ function PlayPageClient() {
                   ref={artRef}
                   className='bg-black w-full h-full rounded-xl overflow-hidden shadow-lg'
                 ></div>
+
+                {/* 下载按钮 */}
+                {videoUrl && (
+                  <button
+                    onClick={handleDownloadVideo}
+                    disabled={isDownloading}
+                    className='absolute top-4 right-4 z-[400] bg-black/70 hover:bg-black/90 text-white p-3 rounded-lg transition-all duration-200 backdrop-blur-sm border border-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed'
+                    title='下载视频'
+                  >
+                    {isDownloading ? (
+                      <div className='w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin'></div>
+                    ) : (
+                      <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                        <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' />
+                      </svg>
+                    )}
+                  </button>
+                )}
 
                 {/* 换源加载蒙层 */}
                 {isVideoLoading && (
