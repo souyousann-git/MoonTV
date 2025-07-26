@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 /* eslint-disable @typescript-eslint/no-var-requires */
 const nextConfig = {
-  output: 'standalone',
+  // 根据环境变量决定输出模式
+  output: process.env.CLOUDFLARE_PAGES ? undefined : 'standalone',
+  trailingSlash: true,
+  skipTrailingSlashRedirect: true,
   eslint: {
     dirs: ['src'],
   },
