@@ -45,7 +45,7 @@ export async function middleware(request: NextRequest) {
     const currentTime = Date.now();
     const tokenTime = authInfo.timestamp;
     const maxAge = 7 * 24 * 60 * 60 * 1000; // 7天过期时间
-    
+
     if (currentTime - tokenTime > maxAge) {
       console.log('认证token已过期');
       return handleAuthFailure(request, pathname);

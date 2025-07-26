@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getAvailableApiSites, getCacheTime } from '@/lib/config';
 import { getDetailFromApi } from '@/lib/downstream';
-import { validateVideoId, sanitizeString } from '@/lib/validation';
+import { sanitizeString, validateVideoId } from '@/lib/validation';
 
 export const runtime = 'edge';
 
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   if (!idValidation.valid) {
     return NextResponse.json({ error: idValidation.error }, { status: 400 });
   }
-  
+
   // 清理source参数
   const cleanSourceCode = sanitizeString(sourceCode, 50);
 

@@ -288,7 +288,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
               ${
                 activeTab === 'episodes'
                   ? 'text-orange-600 dark:text-orange-400'
-                        : 'text-gray-700 hover:text-orange-600 bg-black/5 dark:bg-white/5 dark:text-gray-300 dark:hover:text-orange-400 hover:bg-black/3 dark:hover:bg-white/3'
+                  : 'text-gray-700 hover:text-orange-600 bg-black/5 dark:bg-white/5 dark:text-gray-300 dark:hover:text-orange-400 hover:bg-black/3 dark:hover:bg-white/3'
               }
             `.trim()}
           >

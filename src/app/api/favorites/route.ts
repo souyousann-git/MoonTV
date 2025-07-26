@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { Favorite } from '@/lib/types';
-import { validateVideoId, sanitizeString } from '@/lib/validation';
+import { sanitizeString, validateVideoId } from '@/lib/validation';
 
 export const runtime = 'edge';
 
@@ -36,13 +36,16 @@ export async function GET(request: NextRequest) {
           { status: 400 }
         );
       }
-      
+
       // 验证视频ID
       const idValidation = validateVideoId(id);
       if (!idValidation.valid) {
-        return NextResponse.json({ error: idValidation.error }, { status: 400 });
+        return NextResponse.json(
+          { error: idValidation.error },
+          { status: 400 }
+        );
       }
-      
+
       const fav = await db.getFavorite(authInfo.username, source, id);
       return NextResponse.json(fav, { status: 200 });
     }
@@ -96,19 +99,21 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     // 验证视频ID
     const idValidation = validateVideoId(id);
     if (!idValidation.valid) {
       return NextResponse.json({ error: idValidation.error }, { status: 400 });
     }
-    
+
     // 清理输入数据
     const sanitizedFavorite = {
       ...favorite,
       title: sanitizeString(favorite.title, 200),
       source_name: sanitizeString(favorite.source_name, 100),
-      search_title: favorite.search_title ? sanitizeString(favorite.search_title, 200) : undefined,
+      search_title: favorite.search_title
+        ? sanitizeString(favorite.search_title, 200)
+        : undefined,
     };
 
     const finalFavorite = {

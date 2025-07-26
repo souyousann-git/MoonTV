@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
-import { validateUsername, validatePassword } from '@/lib/validation';
+import { validatePassword, validateUsername } from '@/lib/validation';
 
 export const runtime = 'edge';
 
@@ -90,11 +90,14 @@ export async function POST(req: NextRequest) {
       }
 
       const { password } = await req.json();
-      
+
       // 验证密码输入
       const passwordValidation = validatePassword(password);
       if (!passwordValidation.valid) {
-        return NextResponse.json({ error: passwordValidation.error }, { status: 400 });
+        return NextResponse.json(
+          { error: passwordValidation.error },
+          { status: 400 }
+        );
       }
 
       if (password !== envPassword) {
@@ -127,13 +130,19 @@ export async function POST(req: NextRequest) {
     // 验证用户名输入
     const usernameValidation = validateUsername(username);
     if (!usernameValidation.valid) {
-      return NextResponse.json({ error: usernameValidation.error }, { status: 400 });
+      return NextResponse.json(
+        { error: usernameValidation.error },
+        { status: 400 }
+      );
     }
-    
+
     // 验证密码输入
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-      return NextResponse.json({ error: passwordValidation.error }, { status: 400 });
+      return NextResponse.json(
+        { error: passwordValidation.error },
+        { status: 400 }
+      );
     }
 
     // 可能是站长，直接读环境变量

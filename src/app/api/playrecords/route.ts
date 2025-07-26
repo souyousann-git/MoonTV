@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { PlayRecord } from '@/lib/types';
-import { validateVideoId, sanitizeString } from '@/lib/validation';
+import { sanitizeString, validateVideoId } from '@/lib/validation';
 
 export const runtime = 'edge';
 
@@ -62,19 +62,21 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     // 验证视频ID
     const idValidation = validateVideoId(id);
     if (!idValidation.valid) {
       return NextResponse.json({ error: idValidation.error }, { status: 400 });
     }
-    
+
     // 清理输入数据
     const sanitizedRecord = {
       ...record,
       title: sanitizeString(record.title, 200),
       source_name: sanitizeString(record.source_name, 100),
-      search_title: record.search_title ? sanitizeString(record.search_title, 200) : undefined,
+      search_title: record.search_title
+        ? sanitizeString(record.search_title, 200)
+        : undefined,
     };
 
     const finalRecord = {
@@ -115,11 +117,14 @@ export async function DELETE(request: NextRequest) {
           { status: 400 }
         );
       }
-      
+
       // 验证视频ID
       const idValidation = validateVideoId(id);
       if (!idValidation.valid) {
-        return NextResponse.json({ error: idValidation.error }, { status: 400 });
+        return NextResponse.json(
+          { error: idValidation.error },
+          { status: 400 }
+        );
       }
 
       await db.deletePlayRecord(username, source, id);

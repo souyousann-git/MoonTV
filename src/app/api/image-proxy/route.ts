@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { validateUrl } from '@/lib/validation';
 
 export const runtime = 'edge';
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   if (!imageUrl) {
     return NextResponse.json({ error: 'Missing image URL' }, { status: 400 });
   }
-  
+
   // 验证URL格式
   const urlValidation = validateUrl(imageUrl);
   if (!urlValidation.valid) {

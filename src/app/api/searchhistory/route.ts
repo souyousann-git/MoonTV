@@ -59,7 +59,10 @@ export async function POST(request: NextRequest) {
     // 验证搜索关键词
     const keywordValidation = validateSearchQuery(keyword);
     if (!keywordValidation.valid) {
-      return NextResponse.json({ error: keywordValidation.error }, { status: 400 });
+      return NextResponse.json(
+        { error: keywordValidation.error },
+        { status: 400 }
+      );
     }
 
     await db.addSearchHistory(authInfo.username, keyword);

@@ -228,7 +228,8 @@ export async function getConfig(): Promise<AdminConfig> {
   }
   if (adminConfig) {
     // 合并一些环境变量配置
-    adminConfig.SiteConfig.SiteName = process.env.SITE_NAME || '浩哥TV 必是精品';
+    adminConfig.SiteConfig.SiteName =
+      process.env.SITE_NAME || '浩哥TV 必是精品';
     adminConfig.SiteConfig.Announcement =
       process.env.ANNOUNCEMENT ||
       '本网站仅提供影视信息搜索服务，所有内容均来自第三方网站。本站不存储任何视频资源，不对任何内容的准确性、合法性、完整性负责。';
