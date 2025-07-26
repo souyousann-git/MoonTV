@@ -1,6 +1,6 @@
 {
   "name": "浩哥TV",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "scripts": {
     "dev": "pnpm gen:runtime && pnpm gen:manifest && next dev -H 0.0.0.0",
