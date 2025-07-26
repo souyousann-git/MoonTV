@@ -18,7 +18,7 @@
     "gen:manifest": "node scripts/generate-manifest.js",
     "postbuild": "echo 'Build completed - sitemap generation disabled'",
     "prepare": "husky install",
-    "pages:build": "pnpm gen:runtime && pnpm gen:manifest && next build"
+    "pages:build": "pnpm install --no-frozen-lockfile && pnpm gen:runtime && pnpm gen:manifest && next build"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
